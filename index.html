@@ -138,9 +138,13 @@
     <ul id="list"></ul>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
-    const STORAGE_KEY = 'shopping-list';
-    let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const SUPABASE_URL = 'https://jvmaeldkgsynxbugpstv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2bWFlbGRrZ3N5bnhidWdwc3R2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NTk0OTMsImV4cCI6MjA4NTMzNTQ5M30.6uGcr6nN04lhMfKYZfo8utoJQauCXLrIoc0zR-JmwH8';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let items = [];
 
     const listEl = document.getElementById('list');
     const statsEl = document.getElementById('stats');
@@ -154,22 +158,31 @@
     listEl.addEventListener('click', (e) => {
       const li = e.target.closest('li');
       if (!li) return;
-      const idx = Number(li.dataset.idx);
+      const id = Number(li.dataset.id);
       if (e.target.matches('input[type="checkbox"]')) {
-        toggle(idx);
+        toggle(id);
       } else if (e.target.closest('.delete-btn')) {
-        remove(idx);
+        remove(id);
       }
     });
 
-    function save() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    async function fetchItems() {
+      const { data, error } = await supabase
+        .from('shopping_items')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (error) {
+        console.error('Failed to fetch items:', error);
+        return;
+      }
+      items = data;
+      render();
     }
 
-    function createItemEl(item, idx) {
+    function createItemEl(item) {
       const li = document.createElement('li');
       if (item.done) li.classList.add('checked');
-      li.dataset.idx = idx;
+      li.dataset.id = item.id;
 
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
@@ -204,33 +217,52 @@
       statsEl.textContent = `총 ${items.length}개 / 완료 ${checked}개`;
 
       const fragment = document.createDocumentFragment();
-      items.forEach((item, idx) => fragment.appendChild(createItemEl(item, idx)));
+      items.forEach((item) => fragment.appendChild(createItemEl(item)));
       listEl.appendChild(fragment);
     }
 
-    function addItem() {
+    async function addItem() {
       const name = input.value.trim();
       if (!name) return;
-      items.push({ name, done: false });
       input.value = '';
       input.focus();
-      save();
-      render();
+      const { error } = await supabase
+        .from('shopping_items')
+        .insert({ name, done: false });
+      if (error) {
+        console.error('Failed to add item:', error);
+        return;
+      }
+      await fetchItems();
     }
 
-    function toggle(idx) {
-      items[idx].done = !items[idx].done;
-      save();
-      render();
+    async function toggle(id) {
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+      const { error } = await supabase
+        .from('shopping_items')
+        .update({ done: !item.done })
+        .eq('id', id);
+      if (error) {
+        console.error('Failed to toggle item:', error);
+        return;
+      }
+      await fetchItems();
     }
 
-    function remove(idx) {
-      items.splice(idx, 1);
-      save();
-      render();
+    async function remove(id) {
+      const { error } = await supabase
+        .from('shopping_items')
+        .delete()
+        .eq('id', id);
+      if (error) {
+        console.error('Failed to remove item:', error);
+        return;
+      }
+      await fetchItems();
     }
 
-    render();
+    fetchItems();
   </script>
 </body>
 </html>
