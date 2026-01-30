@@ -142,7 +142,7 @@
   <script>
     const SUPABASE_URL = 'https://jvmaeldkgsynxbugpstv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2bWFlbGRrZ3N5bnhidWdwc3R2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NTk0OTMsImV4cCI6MjA4NTMzNTQ5M30.6uGcr6nN04lhMfKYZfo8utoJQauCXLrIoc0zR-JmwH8';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let items = [];
 
@@ -167,7 +167,7 @@
     });
 
     async function fetchItems() {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('shopping_items')
         .select('*')
         .order('created_at', { ascending: true });
@@ -226,7 +226,7 @@
       if (!name) return;
       input.value = '';
       input.focus();
-      const { error } = await supabase
+      const { error } = await db
         .from('shopping_items')
         .insert({ name, done: false });
       if (error) {
@@ -239,7 +239,7 @@
     async function toggle(id) {
       const item = items.find(i => i.id === id);
       if (!item) return;
-      const { error } = await supabase
+      const { error } = await db
         .from('shopping_items')
         .update({ done: !item.done })
         .eq('id', id);
@@ -251,7 +251,7 @@
     }
 
     async function remove(id) {
-      const { error } = await supabase
+      const { error } = await db
         .from('shopping_items')
         .delete()
         .eq('id', id);
